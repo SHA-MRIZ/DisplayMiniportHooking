@@ -1,4 +1,5 @@
 #include "DisplayMiniportHooking.h"
+#include "RAIIUtils.h"
 
 
 void HookCallbacks(PDRIVER_OBJECT driverObject)
@@ -22,6 +23,10 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT driverObject, _In_ PUNICODE_
     DbgPrint("DriverEntry Called \r\n");
 
     driverObject->DriverUnload = Unload;
+
+    UNICODE_STRING DRV_NAME = RTL_CONSTANT_STRING(L"\\Driver\\SampleDisplay");
+
+    DriverObjectGuard targetDriverObject(&DRV_NAME);
 
     return status;
 }

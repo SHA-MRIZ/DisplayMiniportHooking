@@ -32,5 +32,8 @@
     <ClInclude Include="DisplayMiniportHooking.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RAIIUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
