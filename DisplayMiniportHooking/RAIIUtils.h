@@ -40,7 +40,7 @@ protected:
     bool _isValid;
 };
 
-class DriverObjectGuard : ObjectGuard<PDRIVER_OBJECT>
+class DriverObjectGuard : public ObjectGuard<PDRIVER_OBJECT>
 {
 public:
     DriverObjectGuard(PUNICODE_STRING driverName) : ObjectGuard()
@@ -70,5 +70,14 @@ public:
             _isValid = false;
         }
     }
-};
 
+    PVOID getDriverObjectExtensions(PVOID clientIdentificationAddress)
+    {
+        if (!isValid() || (clientIdentificationAddress == nullptr))
+        {
+            return nullptr;
+        }
+
+        return IoGetDriverObjectExtension(_object, clientIdentificationAddress);
+    }
+};
