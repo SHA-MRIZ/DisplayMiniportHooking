@@ -35,5 +35,8 @@
     <ClInclude Include="RAIIUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DummyMiniport.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

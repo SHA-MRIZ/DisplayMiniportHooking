@@ -1,4 +1,5 @@
 #include "DisplayMiniportHooking.h"
+#include "DummyMiniport.h"
 #include "RAIIUtils.h"
 
 
@@ -18,15 +19,23 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT driverObject, _In_ PUNICODE_
 {
     UNREFERENCED_PARAMETER(registryPath);
 
-    NTSTATUS status = STATUS_SUCCESS;
-
     DbgPrint("DriverEntry Called \r\n");
-
-    driverObject->DriverUnload = Unload;
 
     UNICODE_STRING DRV_NAME = RTL_CONSTANT_STRING(L"\\Driver\\SampleDisplay");
 
     DriverObjectGuard targetDriverObject(&DRV_NAME);
+
+    NTSTATUS status = initDisplay(driverObject, registryPath);
+
+    if (NT_SUCCESS(status))
+    {
+        status = unInitializeMiniport(driverObject);
+        if (NT_SUCCESS(status))
+        {
+            driverObject->DriverUnload = Unload;
+            driverObject->DriverExtension->AddDevice = nullptr;
+        }
+    }
 
     return status;
 }
