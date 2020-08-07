@@ -23,9 +23,9 @@ template <class T>
 class ObjectGuard
 {
 public:
-    ObjectGuard(T object) : _object(object), _isValid(true) {}
+    ObjectGuard(T object) : _object(object), _isValid(true), _shouldDereference(false) {}
 
-    ObjectGuard() : _object(nullptr), _isValid(false) {}
+    ObjectGuard() : _object(nullptr), _isValid(false), _shouldDereference(false) {}
 
     ~ObjectGuard()
     {
@@ -38,11 +38,18 @@ public:
 protected:
     T _object;
     bool _isValid;
+    bool _shouldDereference;
 };
 
 class DriverObjectGuard : public ObjectGuard<PDRIVER_OBJECT>
 {
 public:
+    DriverObjectGuard(PDRIVER_OBJECT drvObject) : ObjectGuard(drvObject)
+    {
+        _object = drvObject;
+        _isValid = true;
+    }
+
     DriverObjectGuard(PUNICODE_STRING driverName) : ObjectGuard()
     {
         PDRIVER_OBJECT drvObject = nullptr;
@@ -59,12 +66,13 @@ public:
         {
             _object = drvObject;
             _isValid = true;
+            _shouldDereference = true;
         }
     }
 
     ~DriverObjectGuard()
     {
-        if (isValid() & (_object != nullptr))
+        if (isValid() && (_object != nullptr) && (_shouldDereference))
         {
             ObDereferenceObject(_object);
             _isValid = false;
