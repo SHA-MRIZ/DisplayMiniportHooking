@@ -21,6 +21,8 @@ NTSTATUS dummyDdiStartDevice(
     UNREFERENCED_PARAMETER(numberOfViews);
     UNREFERENCED_PARAMETER(numberOfChildren);
 
+    DbgPrint("Enter to dummyDdiStartDevice");
+
     return STATUS_SUCCESS;
 }
 
@@ -29,12 +31,16 @@ NTSTATUS dummyDdiAddDevice(_In_ DEVICE_OBJECT* physicalDeviceObject, _Outptr_ PV
     UNREFERENCED_PARAMETER(physicalDeviceObject);
     UNREFERENCED_PARAMETER(deviceContext);
 
+    DbgPrint("Enter to dummyDdiAddDevice");
+
     return STATUS_SUCCESS;
 }
 
 NTSTATUS dummyStopDevice(_In_ VOID* deviceContext)
 {
     UNREFERENCED_PARAMETER(deviceContext);
+
+    DbgPrint("Enter to dummyStopDevice");
 
     return STATUS_SUCCESS;
 }
@@ -47,6 +53,8 @@ NTSTATUS dummyDispatchIoRequest(
     UNREFERENCED_PARAMETER(deviceContext);
     UNREFERENCED_PARAMETER(vidPnSourceId);
     UNREFERENCED_PARAMETER(videoRequestPacket);
+
+    DbgPrint("Enter to dummyDispatchIoRequest");
 
     return STATUS_SUCCESS;
 }
@@ -62,6 +70,8 @@ NTSTATUS dummySetPowerState(
     UNREFERENCED_PARAMETER(devicePowerState);
     UNREFERENCED_PARAMETER(actionType);
 
+    DbgPrint("Enter to dummySetPowerState");
+
     return STATUS_SUCCESS;
 }
 
@@ -73,6 +83,8 @@ NTSTATUS dummyQueryChildRelations(
     UNREFERENCED_PARAMETER(deviceContext);
     UNREFERENCED_PARAMETER(childRelations);
     UNREFERENCED_PARAMETER(childRelationsSize);
+
+    DbgPrint("Enter to dummyQueryChildRelations");
 
     return STATUS_SUCCESS;
 }
@@ -86,6 +98,8 @@ NTSTATUS dummyQueryChildStatus(
     UNREFERENCED_PARAMETER(childStatus);
     UNREFERENCED_PARAMETER(nonDestructiveOnly);
 
+    DbgPrint("Enter to dummyQueryChildStatus");
+
     return STATUS_SUCCESS;
 }
 
@@ -98,6 +112,8 @@ NTSTATUS dummyQueryDeviceDescriptor(
     UNREFERENCED_PARAMETER(childUid);
     UNREFERENCED_PARAMETER(deviceDescriptor);
 
+    DbgPrint("Enter to dummyQueryDeviceDescriptor");
+
     return STATUS_SUCCESS;
 }
 
@@ -108,6 +124,8 @@ NTSTATUS APIENTRY dummyQueryAdapterInfo(
     UNREFERENCED_PARAMETER(hAdapter);
     UNREFERENCED_PARAMETER(queryAdapterInfo);
 
+    DbgPrint("Enter to dummyQueryAdapterInfo");
+
     return STATUS_SUCCESS;
 }
 
@@ -115,56 +133,105 @@ NTSTATUS dummyRemoveDevice(_In_ VOID* deviceContext)
 {
     UNREFERENCED_PARAMETER(deviceContext);
 
+    DbgPrint("Enter to dummyRemoveDevice");
+
     return STATUS_SUCCESS;
 }
 
 VOID dummyDpcRoutine(_In_ VOID* deviceContext)
 {
     UNREFERENCED_PARAMETER(deviceContext);
+
+    DbgPrint("Enter to dummyDpcRoutine");
 }
 
 BOOLEAN dummyInterruptRoutine(_In_ VOID* deviceContext, _In_ ULONG messageNumber)
 {
     UNREFERENCED_PARAMETER(deviceContext);
     UNREFERENCED_PARAMETER(messageNumber);
+
+    DbgPrint("Enter to dummyDpcRoutine");
+
     return TRUE;
 }
 
 VOID dummyUnload()
 {
+    DbgPrint("Enter to dummyUnload");
 }
 
 VOID dummyResetDevice(_In_ VOID* deviceContext)
 {
     UNREFERENCED_PARAMETER(deviceContext);
+
+    DbgPrint("Enter to dummyResetDevice");
 }
 
-NTSTATUS initDisplay(PDRIVER_OBJECT driverObject, PUNICODE_STRING registryPath)
+NTSTATUS dummyCreateAllocation(IN_CONST_HANDLE hAdapter, INOUT_PDXGKARG_CREATEALLOCATION createAllocation)
 {
-    if (!ARGUMENT_PRESENT(driverObject) || !ARGUMENT_PRESENT(registryPath))
+    UNREFERENCED_PARAMETER(hAdapter);
+    UNREFERENCED_PARAMETER(createAllocation);
+
+    DbgPrint("Enter to dummyCreateAllocation");
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS dummySetPointerShape(
+    _In_ CONST HANDLE hAdapter,
+    _In_ CONST DXGKARG_SETPOINTERSHAPE* setPointerShape)
+{
+    UNREFERENCED_PARAMETER(hAdapter);
+    UNREFERENCED_PARAMETER(setPointerShape);
+
+    DbgPrint("Enter to dummySetPointerShape");
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS dummyCollectdbginfo(
+    IN_CONST_HANDLE hAdapter,
+    IN_CONST_PDXGKARG_COLLECTDBGINFO collectDbgInfo)
+{
+    UNREFERENCED_PARAMETER(hAdapter);
+    UNREFERENCED_PARAMETER(collectDbgInfo);
+
+    DbgPrint("Enter to dummyCollectdbginfo");
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS initDisplay(
+    PDRIVER_OBJECT driverObject,
+    PUNICODE_STRING registryPath,
+    PDRIVER_INITIALIZATION_DATA dummyInitData)
+{
+    if (!ARGUMENT_PRESENT(driverObject) ||
+        !ARGUMENT_PRESENT(registryPath) ||
+        !ARGUMENT_PRESENT(dummyInitData))
     {
         return STATUS_INVALID_PARAMETER;
     }
 
-    DRIVER_INITIALIZATION_DATA driverInitializationData = { '\0' };
+    dummyInitData->Version = DXGKDDI_INTERFACE_VERSION;
+    dummyInitData->DxgkDdiAddDevice = dummyDdiAddDevice;
+    dummyInitData->DxgkDdiStartDevice = dummyDdiStartDevice;
+    dummyInitData->DxgkDdiStopDevice = dummyStopDevice;
+    dummyInitData->DxgkDdiRemoveDevice = dummyRemoveDevice;
+    dummyInitData->DxgkDdiDispatchIoRequest = dummyDispatchIoRequest;
+    dummyInitData->DxgkDdiInterruptRoutine = dummyInterruptRoutine;
+    dummyInitData->DxgkDdiDpcRoutine = dummyDpcRoutine;
+    dummyInitData->DxgkDdiQueryChildRelations = dummyQueryChildRelations;
+    dummyInitData->DxgkDdiQueryChildStatus = dummyQueryChildStatus;
+    dummyInitData->DxgkDdiQueryDeviceDescriptor = dummyQueryDeviceDescriptor;
+    dummyInitData->DxgkDdiSetPowerState = dummySetPowerState;
+    dummyInitData->DxgkDdiResetDevice = dummyResetDevice;
+    dummyInitData->DxgkDdiUnload = dummyUnload;
+    dummyInitData->DxgkDdiSetPointerShape = dummySetPointerShape;
+    dummyInitData->DxgkDdiCreateAllocation = dummyCreateAllocation;
+    dummyInitData->DxgkDdiCollectDbgInfo = dummyCollectdbginfo;
 
-    driverInitializationData.Version = DXGKDDI_INTERFACE_VERSION;
-
-    driverInitializationData.DxgkDdiAddDevice = dummyDdiAddDevice;
-    driverInitializationData.DxgkDdiStartDevice = dummyDdiStartDevice;
-    driverInitializationData.DxgkDdiStopDevice = dummyStopDevice;
-    driverInitializationData.DxgkDdiRemoveDevice = dummyRemoveDevice;
-    driverInitializationData.DxgkDdiDispatchIoRequest = dummyDispatchIoRequest;
-    driverInitializationData.DxgkDdiInterruptRoutine = dummyInterruptRoutine;
-    driverInitializationData.DxgkDdiDpcRoutine = dummyDpcRoutine;
-    driverInitializationData.DxgkDdiQueryChildRelations = dummyQueryChildRelations;
-    driverInitializationData.DxgkDdiQueryChildStatus = dummyQueryChildStatus;
-    driverInitializationData.DxgkDdiQueryDeviceDescriptor = dummyQueryDeviceDescriptor;
-    driverInitializationData.DxgkDdiSetPowerState = dummySetPowerState;
-    driverInitializationData.DxgkDdiResetDevice = dummyResetDevice;
-    driverInitializationData.DxgkDdiUnload = dummyUnload;
-
-    return DxgkInitialize(driverObject, registryPath, &driverInitializationData);
+    return DxgkInitialize(driverObject, registryPath, dummyInitData);
 }
 
 NTSTATUS unInitializeMiniport(PDRIVER_OBJECT driverObject)
