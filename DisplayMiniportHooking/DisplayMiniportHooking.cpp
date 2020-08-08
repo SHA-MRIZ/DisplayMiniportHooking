@@ -3,6 +3,22 @@
 #include "RAIIUtils.h"
 
 
+unsigned short findOffsetCallback(void* startAddress, void* callback, unsigned short limit)
+{
+    for (unsigned short i = 0; i < limit / sizeof(unsigned short); i++)
+    {
+        void* potentialPointer = reinterpret_cast<void*>(*(reinterpret_cast<PULONG_PTR>(
+            reinterpret_cast<unsigned short*>(startAddress) + i)));
+
+        if (callback == potentialPointer)
+        {
+            return i * sizeof(unsigned short);
+        }
+    }
+
+    return 0;
+}
+
 void HookCallbacks(PDRIVER_OBJECT driverObject)
 {
     UNREFERENCED_PARAMETER(driverObject);
