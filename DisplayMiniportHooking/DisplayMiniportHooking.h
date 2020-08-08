@@ -1,6 +1,8 @@
 #pragma once
 
-#include <ntifs.h>
+#include "common.h"
+#include "DummyMiniport.h"
+#include "RAIIUtils.h"
 
 
 extern "C" DRIVER_INITIALIZE DriverEntry;

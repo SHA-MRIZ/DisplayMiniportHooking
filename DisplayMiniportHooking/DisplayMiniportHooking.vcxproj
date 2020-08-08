@@ -155,9 +155,10 @@
     <ClCompile Include="DisplayMiniportHooking.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="common.h" />
     <ClInclude Include="DisplayMiniportHooking.h" />
     <ClInclude Include="RAIIUtils.h" />
-	<ClInclude Include="DummyMiniport.h" />
+    <ClInclude Include="DummyMiniport.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,6 +1,4 @@
 #include "DisplayMiniportHooking.h"
-#include "DummyMiniport.h"
-#include "RAIIUtils.h"
 
 
 unsigned short findOffsetCallback(void* startAddress, void* callback, unsigned short limit)

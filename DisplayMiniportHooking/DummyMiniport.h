@@ -1,8 +1,9 @@
 #pragma once
 
+#include "common.h"
+
 extern "C"
 {
-    #include <ntifs.h>
     #include <dispmprt.h>
 };
 

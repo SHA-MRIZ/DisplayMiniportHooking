@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ntifs.h>
+#include "common.h"
 
 
 extern "C" NTSYSAPI NTSTATUS NTAPI ObReferenceObjectByName(
