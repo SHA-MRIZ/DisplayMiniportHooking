@@ -189,6 +189,18 @@ NTSTATUS dummySetPointerShape(
     return STATUS_SUCCESS;
 }
 
+NTSTATUS dummySetPointerPosition(
+    _In_ CONST HANDLE                      hAdapter,
+    _In_ CONST DXGKARG_SETPOINTERPOSITION* setPointerPosition)
+{
+    UNREFERENCED_PARAMETER(hAdapter);
+    UNREFERENCED_PARAMETER(setPointerPosition);
+
+    DbgPrint("Enter to dummySetPointerPosition");
+
+    return STATUS_SUCCESS;
+}
+
 NTSTATUS dummyCollectdbginfo(
     IN_CONST_HANDLE hAdapter,
     IN_CONST_PDXGKARG_COLLECTDBGINFO collectDbgInfo)
@@ -228,6 +240,7 @@ NTSTATUS initDisplay(
     dummyInitData->DxgkDdiResetDevice = dummyResetDevice;
     dummyInitData->DxgkDdiUnload = dummyUnload;
     dummyInitData->DxgkDdiSetPointerShape = dummySetPointerShape;
+    dummyInitData->DxgkDdiSetPointerPosition = dummySetPointerPosition;
     dummyInitData->DxgkDdiCreateAllocation = dummyCreateAllocation;
     dummyInitData->DxgkDdiCollectDbgInfo = dummyCollectdbginfo;
 
