@@ -24,10 +24,19 @@ NTSTATUS hookSetPointerPosition(
 
 unsigned short findOffsetCallback(void* startAddress, void* callback, unsigned short limit)
 {
+    ArrayGuard<unsigned short> memoryBuffer;
+    memoryBuffer.allocate(NonPagedPool, limit / sizeof(unsigned short));
+
+    if (!NT_SUCCESS(readMemorySafe(startAddress, memoryBuffer.get(), limit)))
+    {
+        return INVALID_OFFSET;
+    }
+
+
     for (unsigned short i = 0; i < limit / sizeof(unsigned short); i++)
     {
         void* potentialPointer = reinterpret_cast<void*>(*(reinterpret_cast<PULONG_PTR>(
-            reinterpret_cast<unsigned short*>(startAddress) + i)));
+            reinterpret_cast<unsigned short*>(memoryBuffer.get()) + i)));
 
         if (callback == potentialPointer)
         {
@@ -44,24 +53,40 @@ PVOID* findCallbackLocationByOffset(void* startAddress, unsigned short offset)
         reinterpret_cast<unsigned short*>(startAddress) + (offset / sizeof(unsigned short)));
 }
 
-PVOID* findCallbackLocationInAdapter(void* deviceObjectExtension, void* callback, void* driverExtension)
+PVOID* findCallbackLocationInAdapter(
+    void* deviceObjectExtension,
+    unsigned short limitDeviceObjectExtension,
+    void* driverExtension,
+    unsigned short limitDriverObjectExtension,
+    void* callback)
 {
     if ((deviceObjectExtension == nullptr) || (callback == nullptr))
     {
         return nullptr;
     }
 
-    for (unsigned short i = 0; i < LIMIT_DEVICE_OBJECT_EXTENSION / sizeof(unsigned short); i++)
+    ArrayGuard<unsigned short> deviceExtensionMemoryBuffer;
+    deviceExtensionMemoryBuffer.allocate(NonPagedPool, limitDeviceObjectExtension / sizeof(unsigned short));
+
+    if (!NT_SUCCESS(readMemorySafe(
+        deviceObjectExtension,
+        deviceExtensionMemoryBuffer.get(),
+        limitDeviceObjectExtension)))
+    {
+        return nullptr;
+    }
+
+    for (unsigned short i = 0; i < limitDeviceObjectExtension / sizeof(unsigned short); i++)
     {
         void* potentialAdapterPointer = reinterpret_cast<void*>(*(reinterpret_cast<PULONG_PTR>(
-            reinterpret_cast<unsigned short*>(deviceObjectExtension) + i)));
+            reinterpret_cast<unsigned short*>(deviceExtensionMemoryBuffer.get()) + i)));
 
         if (MmIsAddressValid(potentialAdapterPointer) && (potentialAdapterPointer != driverExtension))
         {
             auto callbackOffset = findOffsetCallback(
                 potentialAdapterPointer,
                 callback,
-                LIMIT_DRIVER_OBJECT_EXTENSION);
+                limitDriverObjectExtension);
 
             if (callbackOffset != INVALID_OFFSET)
             {
@@ -147,8 +172,10 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT driverObject, _In_ PUNICODE_
 
         ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackLocation = findCallbackLocationInAdapter(
             targetDriverObject.get()->DeviceObject->DeviceExtension,
-            ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackAddress,
-            targetDriverObject.getDriverObjectExtensions(targetDriverObject.get()));
+            LIMIT_DEVICE_OBJECT_EXTENSION,
+            targetDriverObject.getDriverObjectExtensions(targetDriverObject.get()),
+            LIMIT_DRIVER_OBJECT_EXTENSION,
+            ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackAddress);
 
         if (ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackLocation != nullptr)
         {

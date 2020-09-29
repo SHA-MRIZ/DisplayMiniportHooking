@@ -15,6 +15,56 @@ extern "C" NTSYSAPI NTSTATUS NTAPI ObReferenceObjectByName(
 
 extern "C" POBJECT_TYPE * IoDriverObjectType;
 
+template <class T, bool shouldDeleteObj = false>
+class ArrayGuard
+{
+public:
+    ArrayGuard() : _array(nullptr), _isValid(false), _size(0) {}
+
+    void allocate(POOL_TYPE poolType, size_t objectsCount)
+    {
+        if (_array != nullptr)
+        {
+            delete _array;
+            _isValid = false;
+        }
+
+        _array = new(poolType, TAG)T[objectsCount * sizeof(T)];
+        NT_ASSERTMSG("Allocate memory for array failed", _array != nullptr);
+        _isValid = true;
+        _size = objectsCount;
+    }
+
+    ~ArrayGuard()
+    {
+        if ((_array != nullptr) && (isValid()))
+        {
+            if constexpr (shouldDeleteObj)
+            {
+                for (size_t i = 0; i < _size; i++)
+                {
+                    delete _array[i];
+                }
+            }
+
+            delete _array;
+        }
+
+        _isValid = false;
+    }
+
+    T operator [](size_t idx) const { return _array[idx]; }
+    T& operator [](size_t idx) { return _array[idx]; }
+    T* get() { return _array; }
+    bool isValid() const { return _isValid; }
+    size_t getSize() { return _size; }
+
+private:
+    T* _array;
+    bool _isValid;
+    size_t _size;
+};
+
 /**
  *  Guard a object.
  *  release object when exiting the current context.
