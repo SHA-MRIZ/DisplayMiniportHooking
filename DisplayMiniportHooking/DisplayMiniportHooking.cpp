@@ -1,6 +1,27 @@
 #include "DisplayMiniportHooking.h"
 
 
+void hookFunction(PVOID* pSourceFunction, PVOID hookFunction)
+{
+    if (MmIsAddressValid(pSourceFunction))
+    {
+        InterlockedExchangePointer(pSourceFunction, hookFunction);
+    }
+}
+
+NTSTATUS hookSetPointerPosition(
+    _In_ CONST HANDLE hAdapter,
+    _In_ CONST DXGKARG_SETPOINTERPOSITION* setPointerPosition)
+{
+    UNREFERENCED_PARAMETER(hAdapter);
+    UNREFERENCED_PARAMETER(setPointerPosition);
+
+    DbgPrint("Enter to hookSetPointerPosition");
+
+    return reinterpret_cast<PDXGKDDI_SETPOINTERPOSITION>(
+        ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackAddress)(hAdapter, setPointerPosition);
+}
+
 unsigned short findOffsetCallback(void* startAddress, void* callback, unsigned short limit)
 {
     for (unsigned short i = 0; i < limit / sizeof(unsigned short); i++)
@@ -14,16 +35,45 @@ unsigned short findOffsetCallback(void* startAddress, void* callback, unsigned s
         }
     }
 
-    return 0;
+    return INVALID_OFFSET;
 }
 
-void* findCallbackByOffset(void* startAddress, unsigned short offset)
+PVOID* findCallbackLocationByOffset(void* startAddress, unsigned short offset)
 {
-    return reinterpret_cast<void*>(*(reinterpret_cast<PULONG_PTR>(
-        reinterpret_cast<unsigned short*>(startAddress) + (offset / sizeof(unsigned short)))));
+    return reinterpret_cast<PVOID*>(
+        reinterpret_cast<unsigned short*>(startAddress) + (offset / sizeof(unsigned short)));
 }
 
-void* findCallbackByDummyCallback(
+PVOID* findCallbackLocationInAdapter(void* deviceObjectExtension, void* callback, void* driverExtension)
+{
+    if ((deviceObjectExtension == nullptr) || (callback == nullptr))
+    {
+        return nullptr;
+    }
+
+    for (unsigned short i = 0; i < LIMIT_DEVICE_OBJECT_EXTENSION / sizeof(unsigned short); i++)
+    {
+        void* potentialAdapterPointer = reinterpret_cast<void*>(*(reinterpret_cast<PULONG_PTR>(
+            reinterpret_cast<unsigned short*>(deviceObjectExtension) + i)));
+
+        if (MmIsAddressValid(potentialAdapterPointer) && (potentialAdapterPointer != driverExtension))
+        {
+            auto callbackOffset = findOffsetCallback(
+                potentialAdapterPointer,
+                callback,
+                LIMIT_DRIVER_OBJECT_EXTENSION);
+
+            if (callbackOffset != INVALID_OFFSET)
+            {
+                return findCallbackLocationByOffset(potentialAdapterPointer, callbackOffset);
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+void* findCallbackInDriverExtension(
     void* dummyDriverObjectExtension,
     void* targetDriverObjectExtension,
     void* dummyCallback)
@@ -40,70 +90,19 @@ void* findCallbackByDummyCallback(
         dummyCallback,
         LIMIT_DRIVER_OBJECT_EXTENSION);
 
-    return findCallbackByOffset(targetDriverObjectExtension, callbackOffset);
-}
+    if (callbackOffset == INVALID_OFFSET)
+    {
+        return nullptr;
+    }
 
-void findWddmCallbacksOffsets(
-    DriverObjectGuard& dummyWddm,
-    DriverObjectGuard& targetWddm,
-    DRIVER_INITIALIZATION_DATA& dummyInitData,
-    DRIVER_INITIALIZATION_DATA& targetDriverInitData)
-{
-    auto dummyDriverObjectExtension = dummyWddm.getDriverObjectExtensions(dummyWddm.get());
-    auto targetDriverObjectExtension = targetWddm.getDriverObjectExtensions(targetWddm.get());
+    auto callbackLocation = findCallbackLocationByOffset(targetDriverObjectExtension, callbackOffset);
 
-    targetDriverInitData.DxgkDdiAddDevice = reinterpret_cast<PDXGKDDI_ADD_DEVICE>(
-        findCallbackByDummyCallback(
-            dummyDriverObjectExtension,
-            targetDriverObjectExtension,
-            reinterpret_cast<void*>(dummyInitData.DxgkDdiAddDevice)));
+    if (!MmIsAddressValid(callbackLocation))
+    {
+        return nullptr;
+    }
 
-    targetDriverInitData.DxgkDdiDpcRoutine = reinterpret_cast<PDXGKDDI_DPC_ROUTINE>(
-        findCallbackByDummyCallback(
-            dummyDriverObjectExtension,
-            targetDriverObjectExtension,
-            reinterpret_cast<void*>(dummyInitData.DxgkDdiDpcRoutine)));
-
-    targetDriverInitData.DxgkDdiQueryChildRelations = reinterpret_cast<PDXGKDDI_QUERY_CHILD_RELATIONS>(
-        findCallbackByDummyCallback(
-            dummyDriverObjectExtension,
-            targetDriverObjectExtension,
-            reinterpret_cast<void*>(dummyInitData.DxgkDdiQueryChildRelations)));
-
-    targetDriverInitData.DxgkDdiInterruptRoutine = reinterpret_cast<PDXGKDDI_INTERRUPT_ROUTINE>(
-        findCallbackByDummyCallback(
-            dummyDriverObjectExtension,
-            targetDriverObjectExtension,
-            reinterpret_cast<void*>(dummyInitData.DxgkDdiInterruptRoutine)));
-
-    targetDriverInitData.DxgkDdiSetPowerState = reinterpret_cast<PDXGKDDI_SET_POWER_STATE>(
-        findCallbackByDummyCallback(
-            dummyDriverObjectExtension,
-            targetDriverObjectExtension,
-            reinterpret_cast<void*>(dummyInitData.DxgkDdiSetPowerState)));
-
-    targetDriverInitData.DxgkDdiCreateAllocation = reinterpret_cast<PDXGKDDI_CREATEALLOCATION>(
-        findCallbackByDummyCallback(
-            dummyDriverObjectExtension,
-            targetDriverObjectExtension,
-            reinterpret_cast<void*>(dummyInitData.DxgkDdiCreateAllocation)));
-
-    targetDriverInitData.DxgkDdiSetPointerShape = reinterpret_cast<PDXGKDDI_SETPOINTERSHAPE>(
-        findCallbackByDummyCallback(
-            dummyDriverObjectExtension,
-            targetDriverObjectExtension,
-            reinterpret_cast<void*>(dummyInitData.DxgkDdiSetPointerShape)));
-
-    targetDriverInitData.DxgkDdiCollectDbgInfo = reinterpret_cast<PDXGKDDI_COLLECTDBGINFO>(
-        findCallbackByDummyCallback(
-            dummyDriverObjectExtension,
-            targetDriverObjectExtension,
-            reinterpret_cast<void*>(dummyInitData.DxgkDdiCollectDbgInfo)));
-}
-
-void HookCallbacks(PDRIVER_OBJECT driverObject)
-{
-    UNREFERENCED_PARAMETER(driverObject);
+    return reinterpret_cast<void*>(*callbackLocation);
 }
 
 VOID Unload(PDRIVER_OBJECT driverObject)
@@ -112,7 +111,11 @@ VOID Unload(PDRIVER_OBJECT driverObject)
 
     DbgPrint("Unload Driver \r\n");
 
-    delete originalCallbacks;
+    hookFunction(
+        ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackLocation,
+        ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackAddress);
+
+    delete ORIGINAL_CALLBACKS_INFO;
 }
 
 extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT driverObject, _In_ PUNICODE_STRING registryPath)
@@ -135,9 +138,24 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT driverObject, _In_ PUNICODE_
     if (NT_SUCCESS(status))
     {
         DriverObjectGuard dummyDriverObject(driverObject);
-        originalCallbacks = new (NonPagedPool, TAG)DRIVER_INITIALIZATION_DATA();
+        ORIGINAL_CALLBACKS_INFO = new (NonPagedPool, TAG)WDDM_CALLBACKS_INFO();
 
-        findWddmCallbacksOffsets(dummyDriverObject, targetDriverObject, dummyInitData, *originalCallbacks);
+        ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackAddress = findCallbackInDriverExtension(
+            dummyDriverObject.getDriverObjectExtensions(dummyDriverObject.get()),
+            targetDriverObject.getDriverObjectExtensions(targetDriverObject.get()),
+            dummyInitData.DxgkDdiSetPointerPosition);
+
+        ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackLocation = findCallbackLocationInAdapter(
+            targetDriverObject.get()->DeviceObject->DeviceExtension,
+            ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackAddress,
+            targetDriverObject.getDriverObjectExtensions(targetDriverObject.get()));
+
+        if (ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackLocation != nullptr)
+        {
+            hookFunction(
+                ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackLocation,
+                hookSetPointerPosition);
+        }
 
         status = unInitializeMiniport(driverObject);
 
