@@ -22,6 +22,32 @@ NTSTATUS hookSetPointerPosition(
         ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackAddress)(hAdapter, setPointerPosition);
 }
 
+NTSTATUS hookPresent(
+    _In_ CONST HANDLE hAdapter,
+    INOUT_PDXGKARG_PRESENT present)
+{
+    UNREFERENCED_PARAMETER(hAdapter);
+    UNREFERENCED_PARAMETER(present);
+
+    DbgPrint("Enter to hookPresent");
+
+    return reinterpret_cast<PDXGKDDI_PRESENT>(
+        ORIGINAL_CALLBACKS_INFO->Present.CallbackAddress)(hAdapter, present);
+}
+
+NTSTATUS hookRender(
+    IN_CONST_HANDLE hContext,
+    INOUT_PDXGKARG_RENDER render)
+{
+    UNREFERENCED_PARAMETER(hContext);
+    UNREFERENCED_PARAMETER(render);
+
+    DbgPrint("Enter to hookRender");
+
+    return reinterpret_cast<PDXGKDDI_RENDER>(
+        ORIGINAL_CALLBACKS_INFO->Render.CallbackAddress)(hContext, render);
+}
+
 unsigned short findOffsetCallback(void* startAddress, void* callback, unsigned short limit)
 {
     ArrayGuard<unsigned short> memoryBuffer;
@@ -31,7 +57,6 @@ unsigned short findOffsetCallback(void* startAddress, void* callback, unsigned s
     {
         return INVALID_OFFSET;
     }
-
 
     for (unsigned short i = 0; i < limit / sizeof(unsigned short); i++)
     {
@@ -130,15 +155,92 @@ void* findCallbackInDriverExtension(
     return reinterpret_cast<void*>(*callbackLocation);
 }
 
+void hookCallbackInAdapter(
+    void* dummyDriverObjectExtension,
+    void* targetDriverObjectExtension,
+    void* targetDeviceObjectExtension,
+    void* dummyCallback,
+    void* hookCallback,
+    PVOID* callbackAddress,
+    PVOID* callbackLocation)
+{
+    *callbackAddress = findCallbackInDriverExtension(
+        dummyDriverObjectExtension,
+        targetDriverObjectExtension,
+        dummyCallback);
+
+    *callbackLocation = findCallbackLocationInAdapter(
+        targetDeviceObjectExtension,
+        LIMIT_DEVICE_OBJECT_EXTENSION,
+        targetDriverObjectExtension,
+        LIMIT_DRIVER_OBJECT_EXTENSION,
+        *callbackAddress);
+
+    if ((*callbackAddress != nullptr) && (*callbackLocation != nullptr))
+    {
+        hookFunction(reinterpret_cast<PVOID*>(*callbackLocation), hookCallback);
+    }
+}
+
+void unHookCallbacks()
+{
+    hookFunction(
+        ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackLocation,
+        ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackAddress);
+
+    hookFunction(
+        ORIGINAL_CALLBACKS_INFO->Present.CallbackLocation,
+        ORIGINAL_CALLBACKS_INFO->Present.CallbackAddress);
+
+    hookFunction(
+        ORIGINAL_CALLBACKS_INFO->Render.CallbackLocation,
+        ORIGINAL_CALLBACKS_INFO->Render.CallbackAddress);
+}
+
+void hookCallbacks(
+    void* dummyDriverObjectExtension,
+    void* targetDriverObjectExtension,
+    void* targetDeviceObjectExtension,
+    DRIVER_INITIALIZATION_DATA dummyInitData)
+{
+    // Set Pointer Position
+    hookCallbackInAdapter(
+        dummyDriverObjectExtension,
+        targetDriverObjectExtension,
+        targetDeviceObjectExtension,
+        dummyInitData.DxgkDdiSetPointerPosition,
+        hookSetPointerPosition,
+        &ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackAddress,
+        reinterpret_cast<PVOID*>(&ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackLocation));
+
+    // Present
+    hookCallbackInAdapter(
+        dummyDriverObjectExtension,
+        targetDriverObjectExtension,
+        targetDeviceObjectExtension,
+        dummyInitData.DxgkDdiPresent,
+        hookPresent,
+        &ORIGINAL_CALLBACKS_INFO->Present.CallbackAddress,
+        reinterpret_cast<PVOID*>(&ORIGINAL_CALLBACKS_INFO->Present.CallbackLocation));
+
+    // Render
+    hookCallbackInAdapter(
+        dummyDriverObjectExtension,
+        targetDriverObjectExtension,
+        targetDeviceObjectExtension,
+        dummyInitData.DxgkDdiRender,
+        hookRender,
+        &ORIGINAL_CALLBACKS_INFO->Render.CallbackAddress,
+        reinterpret_cast<PVOID*>(&ORIGINAL_CALLBACKS_INFO->Render.CallbackLocation));
+}
+
 VOID Unload(PDRIVER_OBJECT driverObject)
 {
     UNREFERENCED_PARAMETER(driverObject);
 
     DbgPrint("Unload Driver \r\n");
 
-    hookFunction(
-        ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackLocation,
-        ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackAddress);
+    unHookCallbacks();
 
     delete ORIGINAL_CALLBACKS_INFO;
 }
@@ -165,24 +267,12 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT driverObject, _In_ PUNICODE_
         DriverObjectGuard dummyDriverObject(driverObject);
         ORIGINAL_CALLBACKS_INFO = new (NonPagedPool, TAG)WDDM_CALLBACKS_INFO();
 
-        ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackAddress = findCallbackInDriverExtension(
-            dummyDriverObject.getDriverObjectExtensions(dummyDriverObject.get()),
-            targetDriverObject.getDriverObjectExtensions(targetDriverObject.get()),
-            dummyInitData.DxgkDdiSetPointerPosition);
 
-        ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackLocation = findCallbackLocationInAdapter(
+        hookCallbacks(
+            dummyDriverObject.getDriverObjectExtension(dummyDriverObject.get()),
+            targetDriverObject.getDriverObjectExtension(targetDriverObject.get()),
             targetDriverObject.get()->DeviceObject->DeviceExtension,
-            LIMIT_DEVICE_OBJECT_EXTENSION,
-            targetDriverObject.getDriverObjectExtensions(targetDriverObject.get()),
-            LIMIT_DRIVER_OBJECT_EXTENSION,
-            ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackAddress);
-
-        if (ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackLocation != nullptr)
-        {
-            hookFunction(
-                ORIGINAL_CALLBACKS_INFO->SetPointerPosition.CallbackLocation,
-                hookSetPointerPosition);
-        }
+            dummyInitData);
 
         status = unInitializeMiniport(driverObject);
 

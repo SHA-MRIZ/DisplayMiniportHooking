@@ -129,7 +129,7 @@ public:
         }
     }
 
-    PVOID getDriverObjectExtensions(PVOID clientIdentificationAddress)
+    PVOID getDriverObjectExtension(PVOID clientIdentificationAddress)
     {
         if (!isValid() || (clientIdentificationAddress == nullptr))
         {

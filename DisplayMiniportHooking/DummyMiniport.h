@@ -8,6 +8,26 @@ extern "C"
 };
 
 
+NTSTATUS dummyRender(IN_CONST_HANDLE hContext, INOUT_PDXGKARG_RENDER render)
+{
+    UNREFERENCED_PARAMETER(hContext);
+    UNREFERENCED_PARAMETER(render);
+
+    DbgPrint("Enter to dummyRender");
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS dummyPresent(_In_ CONST HANDLE hAdapter, INOUT_PDXGKARG_PRESENT present)
+{
+    UNREFERENCED_PARAMETER(hAdapter);
+    UNREFERENCED_PARAMETER(present);
+
+    DbgPrint("Enter to dummyPresent");
+
+    return STATUS_SUCCESS;
+}
+
 NTSTATUS dummyDdiStartDevice(
     _In_  VOID* deviceContext,
     _In_  DXGK_START_INFO* dxgkStartInfo,
@@ -243,6 +263,8 @@ NTSTATUS initDisplay(
     dummyInitData->DxgkDdiSetPointerPosition = dummySetPointerPosition;
     dummyInitData->DxgkDdiCreateAllocation = dummyCreateAllocation;
     dummyInitData->DxgkDdiCollectDbgInfo = dummyCollectdbginfo;
+    dummyInitData->DxgkDdiPresent = dummyPresent;
+    dummyInitData->DxgkDdiRender = dummyRender;
 
     return DxgkInitialize(driverObject, registryPath, dummyInitData);
 }
