@@ -156,11 +156,14 @@
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="common.cpp" />
     <ClCompile Include="DisplayMiniportHooking.cpp" />
+    <ClCompile Include="Hooking.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.h" />
     <ClInclude Include="DisplayMiniportHooking.h" />
+    <ClInclude Include="Hooking.h" />
     <ClInclude Include="RAIIUtils.h" />
     <ClInclude Include="DummyMiniport.h" />
   </ItemGroup>

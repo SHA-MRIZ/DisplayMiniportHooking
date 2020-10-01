@@ -2,11 +2,16 @@
 
 #include "common.h"
 
-extern "C"
-{
-    #include <dispmprt.h>
-};
 
+NTSTATUS dummySubmitCommand(IN_CONST_HANDLE hAdapter, IN_CONST_PDXGKARG_SUBMITCOMMAND submitCommand)
+{
+    UNREFERENCED_PARAMETER(hAdapter);
+    UNREFERENCED_PARAMETER(submitCommand);
+
+    DbgPrint("Enter to dummySubmitCommand");
+
+    return STATUS_SUCCESS;
+}
 
 NTSTATUS dummyRender(IN_CONST_HANDLE hContext, INOUT_PDXGKARG_RENDER render)
 {
@@ -265,6 +270,7 @@ NTSTATUS initDisplay(
     dummyInitData->DxgkDdiCollectDbgInfo = dummyCollectdbginfo;
     dummyInitData->DxgkDdiPresent = dummyPresent;
     dummyInitData->DxgkDdiRender = dummyRender;
+    dummyInitData->DxgkDdiSubmitCommand = dummySubmitCommand;
 
     return DxgkInitialize(driverObject, registryPath, dummyInitData);
 }
