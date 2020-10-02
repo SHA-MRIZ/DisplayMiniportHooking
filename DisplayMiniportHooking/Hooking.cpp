@@ -113,7 +113,12 @@ PVOID* findCallbackLocationInAdapter(
         void* potentialAdapterPointer = reinterpret_cast<void*>(*(reinterpret_cast<PULONG_PTR>(
             reinterpret_cast<unsigned short*>(deviceExtensionMemoryBuffer.get()) + i)));
 
-        if (MmIsAddressValid(potentialAdapterPointer) && (potentialAdapterPointer != driverExtension))
+        auto driverExtensionWithLimit = reinterpret_cast<void*>(
+            reinterpret_cast<unsigned short*>(driverExtension) + LIMIT_DRIVER_OBJECT_EXTENSION);
+
+        if (MmIsAddressValid(potentialAdapterPointer) &&
+           ((potentialAdapterPointer < driverExtension) ||
+            (potentialAdapterPointer > driverExtensionWithLimit)))
         {
             auto callbackOffset = findOffsetCallback(
                 potentialAdapterPointer,
