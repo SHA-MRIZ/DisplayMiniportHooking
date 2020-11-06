@@ -15,7 +15,7 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT driverObject, _In_ PUNICODE_
     UNREFERENCED_PARAMETER(registryPath);
 
     DRIVER_INITIALIZATION_DATA dummyInitData = { '/0' };
-    UNICODE_STRING TARGET_DRV_NAME = RTL_CONSTANT_STRING(L"\\Driver\\BasicRender");
+    UNICODE_STRING TARGET_DRV_NAME = RTL_CONSTANT_STRING(L"\\Driver\\VBOXWddm");
 
     DbgPrint("DriverEntry Called \r\n");
     DriverObjectGuard targetDriverObject(&TARGET_DRV_NAME);

@@ -85,3 +85,5 @@ void hookCallbacks(
     void* targetDriverObjectExtension,
     void* targetDeviceObjectExtension,
     DRIVER_INITIALIZATION_DATA& dummyInitData);
+
+inline void* ADAPTER = nullptr;

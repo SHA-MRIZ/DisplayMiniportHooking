@@ -57,6 +57,11 @@ NTSTATUS hookCreateAllocation(IN_CONST_HANDLE hAdapter, INOUT_PDXGKARG_CREATEALL
 
 unsigned short findOffsetCallback(void* startAddress, void* callback, unsigned short limit)
 {
+    if (startAddress == nullptr)
+    {
+        return INVALID_OFFSET;
+    }
+
     ArrayGuard<unsigned short> memoryBuffer;
     memoryBuffer.allocate(NonPagedPool, limit / sizeof(unsigned short));
 
@@ -85,7 +90,8 @@ PVOID* findCallbackLocationByOffset(void* startAddress, unsigned short offset)
         reinterpret_cast<unsigned short*>(startAddress) + (offset / sizeof(unsigned short)));
 }
 
-PVOID* findCallbackLocationInAdapter(
+
+void* findAdapterLocation(
     void* deviceObjectExtension,
     unsigned short limitDeviceObjectExtension,
     void* driverExtension,
@@ -117,8 +123,8 @@ PVOID* findCallbackLocationInAdapter(
             reinterpret_cast<unsigned short*>(driverExtension) + LIMIT_DRIVER_OBJECT_EXTENSION);
 
         if (MmIsAddressValid(potentialAdapterPointer) &&
-           ((potentialAdapterPointer < driverExtension) ||
-            (potentialAdapterPointer > driverExtensionWithLimit)))
+            ((potentialAdapterPointer < driverExtension) ||
+                (potentialAdapterPointer > driverExtensionWithLimit)))
         {
             auto callbackOffset = findOffsetCallback(
                 potentialAdapterPointer,
@@ -128,9 +134,36 @@ PVOID* findCallbackLocationInAdapter(
             if (callbackOffset != INVALID_OFFSET)
             {
                 DbgPrint("Adapter: %p \n", potentialAdapterPointer);
-                return findCallbackLocationByOffset(potentialAdapterPointer, callbackOffset);
+                return potentialAdapterPointer;
             }
         }
+    }
+
+    return nullptr;
+}
+
+PVOID* findCallbackLocationInAdapter(
+    void* deviceObjectExtension,
+    unsigned short limitDeviceObjectExtension,
+    void* driverExtension,
+    unsigned short limitDriverObjectExtension,
+    void* callback)
+{
+    if (ADAPTER == nullptr)
+    {
+        ADAPTER = findAdapterLocation(
+            deviceObjectExtension,
+            limitDeviceObjectExtension,
+            driverExtension,
+            limitDriverObjectExtension,
+            callback);
+    }
+
+    auto callbackOffset = findOffsetCallback(ADAPTER, callback, limitDriverObjectExtension);
+
+    if (callbackOffset != INVALID_OFFSET)
+    {
+        return findCallbackLocationByOffset(ADAPTER, callbackOffset);
     }
 
     return nullptr;
