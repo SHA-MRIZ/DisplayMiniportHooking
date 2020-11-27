@@ -31,11 +31,14 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT driverObject, _In_ PUNICODE_
     {
         DriverObjectGuard dummyDriverObject(driverObject);
 
-        hookCallbacks(
-            dummyDriverObject.getDriverObjectExtension(dummyDriverObject.get()),
-            targetDriverObject.getDriverObjectExtension(targetDriverObject.get()),
-            targetDriverObject.get()->DeviceObject->DeviceExtension,
-            dummyInitData);
+        if (targetDriverObject.get()->DeviceObject != nullptr)
+        {
+            hookCallbacks(
+                dummyDriverObject.getDriverObjectExtension(dummyDriverObject.get()),
+                targetDriverObject.getDriverObjectExtension(targetDriverObject.get()),
+                targetDriverObject.get()->DeviceObject->DeviceExtension,
+                dummyInitData);
+        }
 
         status = unInitializeMiniport(driverObject);
 
