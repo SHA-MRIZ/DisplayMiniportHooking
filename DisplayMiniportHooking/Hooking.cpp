@@ -3,7 +3,7 @@
 
 void hookFunction(PVOID* pSourceFunction, PVOID hookFunction)
 {
-    if (MmIsAddressValid(pSourceFunction))
+    if (MmIsAddressValid(pSourceFunction) && MmIsAddressValid(hookFunction))
     {
         InterlockedExchangePointer(pSourceFunction, hookFunction);
     }
@@ -89,7 +89,6 @@ PVOID* findCallbackLocationByOffset(void* startAddress, unsigned short offset)
     return reinterpret_cast<PVOID*>(
         reinterpret_cast<unsigned short*>(startAddress) + (offset / sizeof(unsigned short)));
 }
-
 
 void* findAdapterLocation(
     void* deviceObjectExtension,

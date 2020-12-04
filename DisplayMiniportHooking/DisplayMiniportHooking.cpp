@@ -15,7 +15,7 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT driverObject, _In_ PUNICODE_
     UNREFERENCED_PARAMETER(registryPath);
 
     DRIVER_INITIALIZATION_DATA dummyInitData = { '/0' };
-    UNICODE_STRING TARGET_DRV_NAME = RTL_CONSTANT_STRING(L"\\Driver\\VBOXWddm");
+    UNICODE_STRING TARGET_DRV_NAME = RTL_CONSTANT_STRING(L"\\Driver\\BasicRender");
 
     DbgPrint("DriverEntry Called \r\n");
     DriverObjectGuard targetDriverObject(&TARGET_DRV_NAME);
@@ -29,10 +29,10 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT driverObject, _In_ PUNICODE_
 
     if (NT_SUCCESS(status))
     {
-        DriverObjectGuard dummyDriverObject(driverObject);
-
         if (targetDriverObject.get()->DeviceObject != nullptr)
         {
+            DriverObjectGuard dummyDriverObject(driverObject);
+
             hookCallbacks(
                 dummyDriverObject.getDriverObjectExtension(dummyDriverObject.get()),
                 targetDriverObject.getDriverObjectExtension(targetDriverObject.get()),
@@ -42,6 +42,7 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT driverObject, _In_ PUNICODE_
 
         status = unInitializeMiniport(driverObject);
 
+        // Overide the callbacks that DxgkInitialize set to enable unloading of the driver
         if (NT_SUCCESS(status))
         {
             driverObject->DriverUnload = Unload;
